@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro</title>
+    <title>每日菜單紀錄本 Pro v2</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -64,7 +64,7 @@
             cursor: pointer;
         }
 
-        /* 🆕 新增：頂部一週快選列 */
+        /* 頂部一週快選列 */
         .week-strip {
             display: flex;
             justify-content: space-between;
@@ -146,13 +146,14 @@
         }
 
         .sync-status {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: #8c9e8e;
             text-align: center;
             margin-bottom: 12px;
+            font-weight: bold;
         }
 
-        /* 🆕 移至下方的完整月曆 */
+        /* 移至下方的完整月曆 */
         .bottom-calendar {
             background: var(--card-bg);
             border-radius: 20px;
@@ -194,7 +195,7 @@
         }
 
         .toast {
-            position: fixed; bottom: 30px; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; z-index: 1000;
+            position: fixed; bottom: 30px; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; z-index: 1000; pointer-events: none;
         }
     </style>
 </head>
@@ -206,8 +207,7 @@
         <button class="btn-export" onclick="exportToCSV()">備份 CSV</button>
     </header>
 
-    <div class="week-strip" id="week-strip">
-        </div>
+    <div class="week-strip" id="week-strip"></div>
 
     <div id="sync-text" class="sync-status">🔄 正在連線雲端...</div>
 
@@ -232,9 +232,9 @@
 
     <div class="bottom-calendar">
         <div class="calendar-header">
-            <button onclick="changeMonth(-1)" style="border:none;background:none;font-weight:bold;">❮</button>
-            <div id="calendar-month-title" style="font-weight:bold; font-size: 0.9rem;">2026年5月</div>
-            <button onclick="changeMonth(1)" style="border:none;background:none;font-weight:bold;">❯</button>
+            <button onclick="changeMonth(-1)" style="border:none;background:none;font-weight:bold;padding:5px 10px;cursor:pointer;">❮</button>
+            <div id="calendar-month-title" style="font-weight:bold; font-size: 0.9rem;">2026 年 5 月</div>
+            <button onclick="changeMonth(1)" style="border:none;background:none;font-weight:bold;padding:5px 10px;cursor:pointer;">❯</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
     </div>
@@ -243,7 +243,7 @@
 <div id="toast" class="toast">儲存成功</div>
 
 <script>
-    // 🔥🔥 請貼上你的 Google Apps Script 網頁應用程式網址 🔥🔥
+    // 🔥🔥🔥【請在這裡替換成你自己的 Google Apps Script 網頁應用程式網址】🔥🔥🔥
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlq3VbOhNcHcedSjmFgv5NPXUtTEJUKQYQtum33PP1ChNa-Z8X7XXPZ6zTkee6t1JZ-g/exec";
 
     let selectedDate = new Date();
@@ -252,29 +252,197 @@
     let globalCloudData = {};
 
     window.onload = function() {
-        const cached = localStorage.getItem('menu_cloud_cache');
-        if (cached) globalCloudData = JSON.parse(cached);
+        // 嘗試抓取本地快取
+        try {
+            const cached = localStorage.getItem('menu_cloud_cache');
+            if (cached) globalCloudData = JSON.parse(cached);
+        } catch(e) { console.error(e); }
+        
+        // 🔴 確保不論如何，一開網頁絕對要先把日期畫面畫出來！
         renderPage();
+        
+        // 接著再去背景偷偷連線雲端
         fetchDataFromServer();
     };
 
     function renderPage() {
-        renderWeekStrip(); // 渲染頂部一週
-        renderInputFields(); // 渲染輸入框
-        renderCalendar(); // 渲染下方月曆
+        renderWeekStrip();
+        renderInputFields();
+        renderCalendar();
     }
 
-    // 渲染頂部一週快選
+    // 渲染頂部一週快選（以今天為中心，往前算2天，往後算4天，共7天）
     function renderWeekStrip() {
         const strip = document.getElementById('week-strip');
+        if (!strip) return;
         strip.innerHTML = '';
         
-        // 從今天起算的前 2 天到後 4 天，共 7 天
         const today = new Date();
         const start = new Date(today);
-        start.setDate(today.getDate() - 2);
+        start.setDate(today.getDate() - 2); // 往前推兩天
 
         for (let i = 0; i < 7; i++) {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
             const dStr = formatDate(d);
+            const isActive = dStr === formatDate(selectedDate);
+
+            const item = document.createElement('div');
+            item.className = `week-day-item ${isActive ? 'active' : ''}`;
+            item.innerHTML = `
+                <span class="day-name">${getWeekDayString(d)}</span>
+                <span class="day-num">${d.getDate()}</span>
+            `;
+            item.onclick = () => { 
+                selectedDate = d; 
+                renderPage(); 
+            };
+            strip.appendChild(item);
+        }
+    }
+
+    function renderInputFields() {
+        const dateStr = formatDate(selectedDate);
+        const dayData = globalCloudData[dateStr] || { breakfast: '', lunch: '', dinner: '', note: '' };
+        document.getElementById('breakfast').value = dayData.breakfast || '';
+        document.getElementById('lunch').value = dayData.lunch || '';
+        document.getElementById('dinner').value = dayData.dinner || '';
+        document.getElementById('note').value = dayData.note || '';
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        document.getElementById('calendar-month-title').innerText = `${calendarYear} 年 ${calendarMonth + 1} 月`;
+
+        const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+        weekDays.forEach(day => {
+            const label = document.createElement('div');
+            label.className = 'weekday-label';
+            label.innerText = day;
+            grid.appendChild(label);
+        });
+
+        const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+        const totalDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'cal-day empty';
+            grid.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dObj = new Date(calendarYear, calendarMonth, day);
+            const dStr = formatDate(dObj);
+            const cell = document.createElement('div');
+            cell.className = `cal-day ${dStr === formatDate(selectedDate) ? 'selected' : ''} ${hasRecord(dStr) ? 'has-data' : ''}`;
+            cell.innerText = day;
+            cell.onclick = () => { 
+                selectedDate = dObj; 
+                renderPage(); 
+            };
+            grid.appendChild(cell);
+        }
+    }
+
+    function fetchDataFromServer() {
+        const statusText = document.getElementById('sync-text');
+        if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("填入")) {
+            if(statusText) statusText.innerText = "⚠️ 尚未設定 Google 雲端網址，目前為本地儲存模式";
+            return;
+        }
+        
+        if(statusText) statusText.innerText = "🔄 正在連線雲端最新資料...";
+        
+        fetch(GOOGLE_SCRIPT_URL)
+            .then(r => {
+                if (!r.ok) throw new Error('網路回應不成功');
+                return r.json();
+            })
+            .then(data => {
+                globalCloudData = data;
+                localStorage.setItem('menu_cloud_cache', JSON.stringify(data));
+                if(statusText) statusText.innerText = "🟢 雲端同步完成";
+                renderPage();
+            })
+            .catch(err => {
+                console.error(err);
+                if(statusText) statusText.innerText = "🔴 連線失敗 (請確認 Google 部署是否設為「任何人」)";
+            });
+    }
+
+    function saveDataToServer() {
+        const dateStr = formatDate(selectedDate);
+        const currentData = {
+            date: dateStr,
+            breakfast: document.getElementById('breakfast').value,
+            lunch: document.getElementById('lunch').value,
+            dinner: document.getElementById('dinner').value,
+            note: document.getElementById('note').value
+        };
+        
+        globalCloudData[dateStr] = currentData;
+        localStorage.setItem('menu_cloud_cache', JSON.stringify(globalCloudData));
+        renderCalendar();
+        
+        const statusText = document.getElementById('sync-text');
+        if(statusText) statusText.innerText = "⏳ 正在同步修改至雲端...";
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST', 
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentData)
+        }).then(() => {
+            if(statusText) statusText.innerText = "🟢 雲端同步完成";
+            showToast("雲端儲存成功");
+        }).catch(err => {
+            if(statusText) statusText.innerText = "🔴 儲存失敗，已暫存於手機";
+        });
+    }
+
+    function changeMonth(dir) {
+        calendarMonth += dir;
+        if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+        else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+        renderCalendar();
+    }
+
+    function hasRecord(d) { 
+        const data = globalCloudData[d]; 
+        return data && ((data.breakfast || '').trim() !== '' || (data.lunch || '').trim() !== '' || (data.dinner || '').trim() !== '' || (data.note || '').trim() !== ''); 
+    }
+    
+    function formatDate(d) { 
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
+    }
+    
+    function getWeekDayString(d) { 
+        return ['日','一','二','三','四','五','六'][d.getDay()]; 
+    }
+    
+    function showToast(m) { 
+        const t = document.getElementById('toast'); 
+        if(!t) return;
+        t.innerText = m; 
+        t.style.opacity = 1; 
+        setTimeout(() => t.style.opacity = 0, 1500); 
+    }
+
+    function exportToCSV() {
+        let c = "\ufeff日期,早餐,午餐,晚餐,備註\n";
+        Object.keys(globalCloudData).sort().forEach(k => {
+            const d = globalCloudData[k];
+            c += `${k},"${(d.breakfast||'').replace(/"/g,'""')}","${(d.lunch||'').replace(/"/g,'""')}","${(d.dinner||'').replace(/"/g,'""')}","${(d.note||'').replace(/"/g,'""')}"\n`;
+        });
+        const b = new Blob([c], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = `菜單備份_${formatDate(new Date())}.csv`;
+        a.click();
+    }
+</script>
+</body>
+</html>
