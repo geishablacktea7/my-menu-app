@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v8</title>
+    <title>每日菜單紀錄本 Pro v9</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -127,10 +127,10 @@
             margin-bottom: 20px;
         }
 
-        /* 🆕 加上滑動手勢提示動畫的基礎設定 */
+        /* 優化：移除干擾的大範圍移動，改用純平滑淡入動畫，大幅降低卡頓感 */
         .menu-card {
-            touch-action: pan-y; /* 允許手機上下正常滾動網頁，但左右留給滑動手勢 */
-            transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+            touch-action: pan-y;
+            transition: opacity 0.1s ease-out;
         }
 
         .ingredients-card {
@@ -236,7 +236,6 @@
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            animation: popIn 0.2s ease;
         }
         .ingredient-tag .btn-remove {
             margin-left: 6px;
@@ -244,15 +243,6 @@
             color: #9c8e8d;
             font-weight: 800;
             font-size: 0.75rem;
-            transition: color 0.2s;
-        }
-        .ingredient-tag .btn-remove:hover {
-            color: var(--danger-color);
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
         }
 
         .sync-status {
@@ -379,7 +369,6 @@
     let globalCloudData = {};
     let currentIngredientsList = [];
 
-    // 🆕 用來紀錄滑動手勢的變數
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -391,7 +380,7 @@
         
         renderPage();
         fetchDataFromServer();
-        setupSwipeGestures(); // 🆕 初始化滑動手勢監聽
+        setupSwipeGestures();
     };
 
     function renderPage() {
@@ -400,19 +389,15 @@
         renderCalendar();
     }
 
-    // 🆕 新增：設定左右滑動偵測
     function setupSwipeGestures() {
         const card = document.getElementById('swipe-menu-card');
         if (!card) return;
 
-        // 當手指碰到卡片時
         card.addEventListener('touchstart', function(e) {
-            // 如果目前正在輸入文字（Focus 狀態），就不啟用滑動切換，避免使用者在輸入框滑動選字時誤觸
             if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
 
-        // 當手指離開卡片時
         card.addEventListener('touchend', function(e) {
             if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
             touchEndX = e.changedTouches[0].screenX;
@@ -420,55 +405,37 @@
         }, { passive: true });
     }
 
-    // 🆕 新增：判斷滑動方向並執行日期切換
+    // 🆕 核心優化：移除計時器延遲，讓上下UI元件一滑動就「瞬間同步」
     function handleSwipeAction() {
         const slideDistance = touchEndX - touchStartX;
-        const threshold = 60; // 🚀 至少滑動超過 60 像素才算有效滑動（防誤觸）
+        const threshold = 50; 
 
         if (Math.abs(slideDistance) < threshold) return;
 
         const nextDate = new Date(selectedDate);
         
         if (slideDistance < 0) {
-            // ⬅️ 由右往左滑：看下一天
             nextDate.setDate(selectedDate.getDate() + 1);
-            triggerSwipeAnimation('left');
         } else {
-            // ➡️ 由左往右滑：看前一天
             nextDate.setDate(selectedDate.getDate() - 1);
-            triggerSwipeAnimation('right');
         }
 
-        // 更新全域日期並重新渲染畫面
+        // 1. 邏輯與核心變數立刻到位
         selectedDate = nextDate;
-        // 如果滑動跨月了，同步更新下方月曆的月份
         calendarYear = selectedDate.getFullYear();
         calendarMonth = selectedDate.getMonth();
         
-        setTimeout(() => {
-            renderPage();
-        }, 1500); // 稍微延遲讓動畫跑完
-    }
-
-    // 🆕 新增：滑動切換切換時的微特效提示
-    function triggerSwipeAnimation(direction) {
+        // 2. 觸發輸入框卡片的平滑淡入過渡效果
         const card = document.getElementById('swipe-menu-card');
-        if (!card) return;
-        
-        // 瞬間平滑滑出
-        card.style.opacity = '0';
-        card.style.transform = direction === 'left' ? 'translateX(-30px)' : 'translateX(30px)';
-        
-        // 瞬間拉回並淡入
+        if (card) card.style.opacity = '0.3';
+
+        // 3. 畫面「瞬間刷新」，週曆和月曆立刻對齊正確日子
+        renderPage();
+
+        // 4. 文字框平滑回復亮度
         setTimeout(() => {
-            card.style.transition = 'none';
-            card.style.transform = direction === 'left' ? 'translateX(30px)' : 'translateX(-30px)';
-            setTimeout(() => {
-                card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-                card.style.opacity = '1';
-                card.style.transform = 'translateX(0)';
-            }, 50);
-        }, 150);
+            if (card) card.style.opacity = '1';
+        }, 60);
     }
 
     function renderWeekStrip() {
