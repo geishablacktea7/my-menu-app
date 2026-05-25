@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v2</title>
+    <title>每日菜單紀錄本 Pro v3</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -99,12 +99,29 @@
             font-weight: 700;
         }
 
+        /* 🆕 特別標註「今天」的視覺提示 */
+        .week-day-item.is-today .day-num {
+            color: #d17a5b;
+            position: relative;
+        }
+        .week-day-item.is-today .day-num::after {
+            content: '●';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 6px;
+            color: #d17a5b;
+        }
+
         .week-day-item.active {
             background-color: var(--selected-bg);
-            color: white;
+            color: white !important;
         }
-        .week-day-item.active .day-name {
-            color: rgba(255,255,255,0.8);
+        .week-day-item.active .day-name, 
+        .week-day-item.active .day-num,
+        .week-day-item.active.is-today .day-num::after {
+            color: white !important;
         }
 
         /* 內容輸入卡片 */
@@ -153,7 +170,7 @@
             font-weight: bold;
         }
 
-        /* 移至下方的完整月曆 */
+        /* 下方的完整月曆 */
         .bottom-calendar {
             background: var(--card-bg);
             border-radius: 20px;
@@ -252,16 +269,12 @@
     let globalCloudData = {};
 
     window.onload = function() {
-        // 嘗試抓取本地快取
         try {
             const cached = localStorage.getItem('menu_cloud_cache');
             if (cached) globalCloudData = JSON.parse(cached);
         } catch(e) { console.error(e); }
         
-        // 🔴 確保不論如何，一開網頁絕對要先把日期畫面畫出來！
         renderPage();
-        
-        // 接著再去背景偷偷連線雲端
         fetchDataFromServer();
     };
 
@@ -271,26 +284,27 @@
         renderCalendar();
     }
 
-    // 渲染頂部一週快選（以今天為中心，往前算2天，往後算4天，共7天）
+    // 🆕 渲染頂部快選：從今天開始往後算 7 天
     function renderWeekStrip() {
         const strip = document.getElementById('week-strip');
         if (!strip) return;
         strip.innerHTML = '';
         
         const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - 2); // 往前推兩天
 
         for (let i = 0; i < 7; i++) {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
+            const d = new Date(today);
+            d.setDate(today.getDate() + i); // 🟢 從今天起算，每天往後遞增 1 天
             const dStr = formatDate(d);
+            
             const isActive = dStr === formatDate(selectedDate);
+            const isToday = dStr === formatDate(today);
 
             const item = document.createElement('div');
-            item.className = `week-day-item ${isActive ? 'active' : ''}`;
+            // 如果是今天，多加上一個 is-today 的樣式類別
+            item.className = `week-day-item ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''}`;
             item.innerHTML = `
-                <span class="day-name">${getWeekDayString(d)}</span>
+                <span class="day-name">${isToday ? '今' : getWeekDayString(d)}</span>
                 <span class="day-num">${d.getDate()}</span>
             `;
             item.onclick = () => { 
@@ -442,7 +456,3 @@
         a.href = URL.createObjectURL(b);
         a.download = `菜單備份_${formatDate(new Date())}.csv`;
         a.click();
-    }
-</script>
-</body>
-</html>
