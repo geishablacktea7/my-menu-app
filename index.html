@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v6</title>
+    <title>每日菜單紀錄本 Pro v7</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -15,7 +15,8 @@
             --today-bg: #ebdcd5;
             --selected-bg: #8c9e8e;
             --today-red: #d14949;
-            --fridge-color: #6d8294; /* 🆕 食材庫存專用藍灰色 */
+            --fridge-color: #6d8294;
+            --danger-color: #c96868;
         }
 
         * {
@@ -126,7 +127,6 @@
             margin-bottom: 20px;
         }
 
-        /* 🆕 現有食材庫存卡片專用樣式 */
         .ingredients-card {
             border-left: 5px solid var(--fridge-color);
         }
@@ -144,10 +144,29 @@
             margin-bottom: 6px;
             display: flex;
             align-items: center;
+            justify-content: space-between; /* 🆕 讓一鍵清除按鈕靠右 */
             color: #5c4d4c;
         }
 
+        .meal-label div { display: flex; align-items: center; }
         .meal-label span { margin-right: 6px; }
+
+        /* 🆕 一鍵清除按鈕樣式 */
+        .btn-clear-all {
+            background: none;
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-clear-all:active {
+            background-color: var(--danger-color);
+            color: white;
+        }
 
         textarea {
             width: 100%;
@@ -162,11 +181,74 @@
             outline: none;
         }
 
-        /* 食材專用輸入框高度調高一點方便條列 */
-        #ingredients-stock {
-            height: 95px;
-            background-color: #f4f6f8;
+        /* 🆕 食材輸入框與新增按鈕的組合組合區 */
+        .ingredient-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .ingredient-input-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 12px;
             border: 1px solid #ced5dc;
+            background-color: #f4f6f8;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .btn-add-tag {
+            background-color: var(--fridge-color);
+            color: white;
+            border: none;
+            padding: 0 16px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* 🆕 食材庫存標籤顯示容器 */
+        .tags-container {
+            width: 100%;
+            min-height: 70px;
+            background-color: #faf9f6;
+            border: 1px dashed #ced5dc;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap; /* 讓標籤自動換行 */
+            gap: 8px;
+            align-content: flex-start;
+        }
+
+        /* 🆕 庫存食材小標籤樣式 */
+        .ingredient-tag {
+            background-color: #ebdcd5;
+            color: #4a3e3d;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            animation: popIn 0.2s ease;
+        }
+        /* 標籤內建的 X 移除鈕 */
+        .ingredient-tag .btn-remove {
+            margin-left: 6px;
+            cursor: pointer;
+            color: #9c8e8d;
+            font-weight: 800;
+            font-size: 0.75rem;
+            transition: color 0.2s;
+        }
+        .ingredient-tag .btn-remove:hover {
+            color: var(--danger-color);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .sync-status {
@@ -236,27 +318,37 @@
 
     <div class="menu-card">
         <div class="meal-group">
-            <div class="meal-label"><span>🌅</span> 早餐 Breakfast</div>
+            <div class="meal-label"><div><span>🌅</span> 早餐 Breakfast</div></div>
             <textarea id="breakfast" placeholder="輸入內容..." onchange="saveDataToServer()"></textarea>
         </div>
         <div class="meal-group">
-            <div class="meal-label"><span>☀️</span> 午餐 Lunch</div>
+            <div class="meal-label"><div><span>☀️</span> 午餐 Lunch</div></div>
             <textarea id="lunch" placeholder="輸入內容..." onchange="saveDataToServer()"></textarea>
         </div>
         <div class="meal-group">
-            <div class="meal-label"><span>🌙</span> 晚餐 Dinner</div>
+            <div class="meal-label"><div><span>🌙</span> 晚餐 Dinner</div></div>
             <textarea id="dinner" placeholder="輸入內容..." onchange="saveDataToServer()"></textarea>
         </div>
         <div class="meal-group">
-            <div class="meal-label"><span>📝</span> 備註</div>
+            <div class="meal-label"><div><span>📝</span> 備註</div></div>
             <textarea id="note" style="height: 50px;" onchange="saveDataToServer()"></textarea>
         </div>
     </div>
 
     <div class="ingredients-card">
         <div class="meal-group">
-            <div class="meal-label" style="color: var(--fridge-color);"><span>🧊</span> 現有食材庫存 </div>
-            <textarea id="ingredients-stock" placeholder="高麗菜半顆、雞蛋一盒、冷凍鮭魚..." onchange="saveIngredientsToServer()"></textarea>
+            <div class="meal-label" style="color: var(--fridge-color);">
+                <div><span>🧊</span> 現有食材庫存 </div>
+                <button class="btn-clear-all" onclick="clearAllIngredients()">一鍵清除</button>
+            </div>
+            
+            <div class="ingredient-input-row">
+                <input type="text" id="ingredient-input" placeholder="新增一項食材 (例如: 雞肉)..." onkeydown="if(event.key==='Enter') addIngredientTag()">
+                <button class="btn-add-tag" onclick="addIngredientTag()">新增</button>
+            </div>
+
+            <div class="tags-container" id="tags-container">
+                </div>
         </div>
     </div>
 
@@ -273,16 +365,16 @@
 <div id="toast" class="toast">儲存成功</div>
 
 <script>
-    // 🔥🔥🔥【請在這裡替換成你自己的 Google Apps Script 網頁應用程式網址】🔥🔥開
+    // 🔥🔥🔥【請在這裡替換成你自己的 Google Apps Script 網頁應用程式網址】🔥🔥🔥
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlq3VbOhNcHcedSjmFgv5NPXUtTEJUKQYQtum33PP1ChNa-Z8X7XXPZ6zTkee6t1JZ-g/exec";
 
-    // 固定的特殊識別識別代碼
     const INGREDIENTS_KEY = "__GLOBAL_INGREDIENTS__";
 
     let selectedDate = new Date();
     let calendarYear = selectedDate.getFullYear();
     let calendarMonth = selectedDate.getMonth();
     let globalCloudData = {};
+    let currentIngredientsList = []; // 存放當前食材陣列
 
     window.onload = function() {
         try {
@@ -321,10 +413,7 @@
                 <span class="day-name">${getWeekDayString(d)}</span>
                 <span class="day-num">${d.getDate()}</span>
             `;
-            item.onclick = () => { 
-                selectedDate = d; 
-                renderPage(); 
-            };
+            item.onclick = () => { selectedDate = d; renderPage(); };
             strip.appendChild(item);
         }
     }
@@ -339,11 +428,71 @@
         document.getElementById('dinner').value = dayData.dinner || '';
         document.getElementById('note').value = dayData.note || '';
 
-        // 🆕 渲染常駐食材區（永遠只抓固定特殊代碼的資料）
+        // 🆕 解析並渲染常駐食材標籤
         const ingData = globalCloudData[INGREDIENTS_KEY] || { breakfast: '' };
-        document.getElementById('ingredients-stock').value = ingData.breakfast || '';
+        const rawString = ingData.breakfast || '';
+        
+        // 用英文逗號拆分字串，濾掉空字串
+        currentIngredientsList = rawString.split(',').map(s => s.trim()).filter(s => s !== '');
+        renderIngredientTags();
     }
 
+    // 🆕 渲染食材小標籤
+    function renderIngredientTags() {
+        const container = document.getElementById('tags-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (currentIngredientsList.length === 0) {
+            container.innerHTML = '<span style="color:#b5a9a8; font-size:0.85rem; padding: 5px;">目前沒有庫存食材</span>';
+            return;
+        }
+
+        currentIngredientsList.forEach((item, index) => {
+            const tag = document.createElement('div');
+            tag.className = 'ingredient-tag';
+            tag.innerHTML = `
+                ${item}
+                <span class="btn-remove" onclick="removeIngredientTag(${index})">✕</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    // 🆕 新增單個食材標籤
+    function addIngredientTag() {
+        const input = document.getElementById('ingredient-input');
+        const value = input.value.trim();
+        if (value === '') return;
+
+        // 防止重複新增一模一樣的食材
+        if (!currentIngredientsList.includes(value)) {
+            currentIngredientsList.push(value);
+            renderIngredientTags();
+            saveIngredientsToServer();
+        }
+        input.value = ''; // 清空輸入欄位
+        input.focus();
+    }
+
+    // 🆕 移除單個食材標籤
+    function removeIngredientTag(index) {
+        currentIngredientsList.splice(index, 1);
+        renderIngredientTags();
+        saveIngredientsToServer();
+    }
+
+    // 🆕 一鍵清除所有食材標籤
+    function clearAllIngredients() {
+        if (currentIngredientsList.length === 0) return;
+        if (confirm("確定要清空所有現有食材庫存嗎？")) {
+            currentIngredientsList = [];
+            renderIngredientTags();
+            saveIngredientsToServer();
+        }
+    }
+
+    // 渲染完整月曆
     function renderCalendar() {
         const grid = document.getElementById('calendar-grid');
         if (!grid) return;
@@ -362,9 +511,7 @@
         const totalDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
         for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'cal-day empty';
-            grid.appendChild(emptyCell);
+            grid.appendChild(Object.assign(document.createElement('div'), {className: 'cal-day empty'}));
         }
 
         for (let day = 1; day <= totalDays; day++) {
@@ -373,10 +520,7 @@
             const cell = document.createElement('div');
             cell.className = `cal-day ${dStr === formatDate(selectedDate) ? 'selected' : ''} ${hasRecord(dStr) ? 'has-data' : ''}`;
             cell.innerText = day;
-            cell.onclick = () => { 
-                selectedDate = dObj; 
-                renderPage(); 
-            };
+            cell.onclick = () => { selectedDate = dObj; renderPage(); };
             grid.appendChild(cell);
         }
     }
@@ -391,10 +535,7 @@
         if(statusText) statusText.innerText = "🔄 正在連線雲端最新資料...";
         
         fetch(GOOGLE_SCRIPT_URL)
-            .then(r => {
-                if (!r.ok) throw new Error('網路回應不成功');
-                return r.json();
-            })
+            .then(r => r.json())
             .then(data => {
                 globalCloudData = data;
                 localStorage.setItem('menu_cloud_cache', JSON.stringify(data));
@@ -407,7 +548,6 @@
             });
     }
 
-    // 儲存每日菜單
     function saveDataToServer() {
         const dateStr = formatDate(selectedDate);
         const currentData = {
@@ -417,37 +557,30 @@
             dinner: document.getElementById('dinner').value,
             note: document.getElementById('note').value
         };
-        
         globalCloudData[dateStr] = currentData;
         postToServer(currentData);
     }
 
-    // 🆕 儲存常駐食材（固定寫入特殊代碼行）
+    // 🆕 儲存食材（將陣列重新用逗號串聯，塞進雲端）
     function saveIngredientsToServer() {
+        const combinedString = currentIngredientsList.join(',');
         const currentData = {
             date: INGREDIENTS_KEY,
-            breakfast: document.getElementById('ingredients-stock').value, // 借用早餐欄位存放食材字串
-            lunch: '',
-            dinner: '',
-            note: ''
+            breakfast: combinedString, 
+            lunch: '', dinner: '', note: ''
         };
-        
         globalCloudData[INGREDIENTS_KEY] = currentData;
         postToServer(currentData);
     }
 
-    // 統一發送 API 到 Google 雲端
     function postToServer(payload) {
         localStorage.setItem('menu_cloud_cache', JSON.stringify(globalCloudData));
         renderCalendar();
-        
         const statusText = document.getElementById('sync-text');
         if(statusText) statusText.innerText = "⏳ 正在同步修改至雲端...";
 
         fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST', 
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).then(() => {
             if(statusText) statusText.innerText = "🟢 雲端同步完成";
@@ -469,35 +602,19 @@
         const data = globalCloudData[d]; 
         return data && ((data.breakfast || '').trim() !== '' || (data.lunch || '').trim() !== '' || (data.dinner || '').trim() !== '' || (data.note || '').trim() !== ''); 
     }
-    
-    function formatDate(d) { 
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
-    }
-    
-    function getWeekDayString(d) { 
-        return ['日','一','二','三','四','五','六'][d.getDay()]; 
-    }
-    
-    function showToast(m) { 
-        const t = document.getElementById('toast'); 
-        if(!t) return;
-        t.innerText = m; 
-        t.style.opacity = 1; 
-        setTimeout(() => t.style.opacity = 0, 1500); 
-    }
+    function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function getWeekDayString(d) { return ['日','一','二','三','四','五','六'][d.getDay()]; }
+    function showToast(m) { const t = document.getElementById('toast'); if(t) { t.innerText = m; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 1500); } }
 
     function exportToCSV() {
         let c = "\ufeff日期,早餐,午餐,晚餐,備註\n";
         Object.keys(globalCloudData).sort().forEach(k => {
-            // 導出時將特殊標籤換成更好辨識的名稱
             let displayName = (k === INGREDIENTS_KEY) ? "常駐現有食材庫存" : k;
             const d = globalCloudData[k];
-            
             let bf = (d.breakfast || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let lh = (d.lunch || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let dn = (d.dinner || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let nt = (d.note || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
-            
             c += `${displayName},"${bf}","${lh}","${dn}","${nt}"\n`;
         });
         const b = new Blob([c], { type: 'text/csv;charset=utf-8;' });
