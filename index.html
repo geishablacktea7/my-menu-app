@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v9</title>
+    <title>每日菜單紀錄本 Pro v11</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -127,7 +127,6 @@
             margin-bottom: 20px;
         }
 
-        /* 優化：移除干擾的大範圍移動，改用純平滑淡入動畫，大幅降低卡頓感 */
         .menu-card {
             touch-action: pan-y;
             transition: opacity 0.1s ease-out;
@@ -173,9 +172,10 @@
             color: white;
         }
 
+        /* 預設基礎高度 (套用到早餐、午餐、備註) */
         textarea {
             width: 100%;
-            height: 70px;
+            height: 50px;
             background-color: #faf9f6;
             border: 1px solid #ebdcd5;
             border-radius: 12px;
@@ -184,6 +184,11 @@
             color: var(--text-main);
             resize: none;
             outline: none;
+        }
+
+        /* 🆕 獨立設定：只有晚餐的文字框保持 70px 高度 */
+        #dinner {
+            height: 70px;
         }
 
         /* 食材輸入框與新增按鈕的組合區 */
@@ -325,14 +330,14 @@
         </div>
         <div class="meal-group">
             <div class="meal-label"><div><span>📝</span> 備註</div></div>
-            <textarea id="note" style="height: 50px;" onchange="saveDataToServer()"></textarea>
+            <textarea id="note" placeholder="輸入備註..." onchange="saveDataToServer()"></textarea>
         </div>
     </div>
 
     <div class="ingredients-card">
         <div class="meal-group">
             <div class="meal-label" style="color: var(--fridge-color);">
-                <div><span>🧊</span> 現有食材庫存 </div>
+                <div><span>🧊</span> 現有食材庫存</div>
                 <button class="btn-clear-all" onclick="clearAllIngredients()">一鍵清除</button>
             </div>
             
@@ -405,7 +410,6 @@
         }, { passive: true });
     }
 
-    // 🆕 核心優化：移除計時器延遲，讓上下UI元件一滑動就「瞬間同步」
     function handleSwipeAction() {
         const slideDistance = touchEndX - touchStartX;
         const threshold = 50; 
@@ -420,19 +424,15 @@
             nextDate.setDate(selectedDate.getDate() - 1);
         }
 
-        // 1. 邏輯與核心變數立刻到位
         selectedDate = nextDate;
         calendarYear = selectedDate.getFullYear();
         calendarMonth = selectedDate.getMonth();
         
-        // 2. 觸發輸入框卡片的平滑淡入過渡效果
         const card = document.getElementById('swipe-menu-card');
         if (card) card.style.opacity = '0.3';
 
-        // 3. 畫面「瞬間刷新」，週曆和月曆立刻對齊正確日子
         renderPage();
 
-        // 4. 文字框平滑回復亮度
         setTimeout(() => {
             if (card) card.style.opacity = '1';
         }, 60);
