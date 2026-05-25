@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v7</title>
+    <title>每日菜單紀錄本 Pro v8</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -127,6 +127,12 @@
             margin-bottom: 20px;
         }
 
+        /* 🆕 加上滑動手勢提示動畫的基礎設定 */
+        .menu-card {
+            touch-action: pan-y; /* 允許手機上下正常滾動網頁，但左右留給滑動手勢 */
+            transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+        }
+
         .ingredients-card {
             border-left: 5px solid var(--fridge-color);
         }
@@ -144,14 +150,13 @@
             margin-bottom: 6px;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* 🆕 讓一鍵清除按鈕靠右 */
+            justify-content: space-between;
             color: #5c4d4c;
         }
 
         .meal-label div { display: flex; align-items: center; }
         .meal-label span { margin-right: 6px; }
 
-        /* 🆕 一鍵清除按鈕樣式 */
         .btn-clear-all {
             background: none;
             border: 1px solid var(--danger-color);
@@ -181,7 +186,7 @@
             outline: none;
         }
 
-        /* 🆕 食材輸入框與新增按鈕的組合組合區 */
+        /* 食材輸入框與新增按鈕的組合區 */
         .ingredient-input-row {
             display: flex;
             gap: 8px;
@@ -207,7 +212,7 @@
             cursor: pointer;
         }
 
-        /* 🆕 食材庫存標籤顯示容器 */
+        /* 食材庫存標籤顯示容器 */
         .tags-container {
             width: 100%;
             min-height: 70px;
@@ -216,12 +221,12 @@
             border-radius: 12px;
             padding: 10px;
             display: flex;
-            flex-wrap: wrap; /* 讓標籤自動換行 */
+            flex-wrap: wrap;
             gap: 8px;
             align-content: flex-start;
         }
 
-        /* 🆕 庫存食材小標籤樣式 */
+        /* 庫存食材小標籤樣式 */
         .ingredient-tag {
             background-color: #ebdcd5;
             color: #4a3e3d;
@@ -233,7 +238,6 @@
             align-items: center;
             animation: popIn 0.2s ease;
         }
-        /* 標籤內建的 X 移除鈕 */
         .ingredient-tag .btn-remove {
             margin-left: 6px;
             cursor: pointer;
@@ -316,7 +320,7 @@
     <div class="week-strip" id="week-strip"></div>
     <div id="sync-text" class="sync-status">🔄 正在連線雲端...</div>
 
-    <div class="menu-card">
+    <div class="menu-card" id="swipe-menu-card">
         <div class="meal-group">
             <div class="meal-label"><div><span>🌅</span> 早餐 Breakfast</div></div>
             <textarea id="breakfast" placeholder="輸入內容..." onchange="saveDataToServer()"></textarea>
@@ -347,8 +351,7 @@
                 <button class="btn-add-tag" onclick="addIngredientTag()">新增</button>
             </div>
 
-            <div class="tags-container" id="tags-container">
-                </div>
+            <div class="tags-container" id="tags-container"></div>
         </div>
     </div>
 
@@ -374,7 +377,11 @@
     let calendarYear = selectedDate.getFullYear();
     let calendarMonth = selectedDate.getMonth();
     let globalCloudData = {};
-    let currentIngredientsList = []; // 存放當前食材陣列
+    let currentIngredientsList = [];
+
+    // 🆕 用來紀錄滑動手勢的變數
+    let touchStartX = 0;
+    let touchEndX = 0;
 
     window.onload = function() {
         try {
@@ -384,12 +391,84 @@
         
         renderPage();
         fetchDataFromServer();
+        setupSwipeGestures(); // 🆕 初始化滑動手勢監聽
     };
 
     function renderPage() {
         renderWeekStrip();
         renderInputFields();
         renderCalendar();
+    }
+
+    // 🆕 新增：設定左右滑動偵測
+    function setupSwipeGestures() {
+        const card = document.getElementById('swipe-menu-card');
+        if (!card) return;
+
+        // 當手指碰到卡片時
+        card.addEventListener('touchstart', function(e) {
+            // 如果目前正在輸入文字（Focus 狀態），就不啟用滑動切換，避免使用者在輸入框滑動選字時誤觸
+            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        // 當手指離開卡片時
+        card.addEventListener('touchend', function(e) {
+            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipeAction();
+        }, { passive: true });
+    }
+
+    // 🆕 新增：判斷滑動方向並執行日期切換
+    function handleSwipeAction() {
+        const slideDistance = touchEndX - touchStartX;
+        const threshold = 60; // 🚀 至少滑動超過 60 像素才算有效滑動（防誤觸）
+
+        if (Math.abs(slideDistance) < threshold) return;
+
+        const nextDate = new Date(selectedDate);
+        
+        if (slideDistance < 0) {
+            // ⬅️ 由右往左滑：看下一天
+            nextDate.setDate(selectedDate.getDate() + 1);
+            triggerSwipeAnimation('left');
+        } else {
+            // ➡️ 由左往右滑：看前一天
+            nextDate.setDate(selectedDate.getDate() - 1);
+            triggerSwipeAnimation('right');
+        }
+
+        // 更新全域日期並重新渲染畫面
+        selectedDate = nextDate;
+        // 如果滑動跨月了，同步更新下方月曆的月份
+        calendarYear = selectedDate.getFullYear();
+        calendarMonth = selectedDate.getMonth();
+        
+        setTimeout(() => {
+            renderPage();
+        }, 1500); // 稍微延遲讓動畫跑完
+    }
+
+    // 🆕 新增：滑動切換切換時的微特效提示
+    function triggerSwipeAnimation(direction) {
+        const card = document.getElementById('swipe-menu-card');
+        if (!card) return;
+        
+        // 瞬間平滑滑出
+        card.style.opacity = '0';
+        card.style.transform = direction === 'left' ? 'translateX(-30px)' : 'translateX(30px)';
+        
+        // 瞬間拉回並淡入
+        setTimeout(() => {
+            card.style.transition = 'none';
+            card.style.transform = direction === 'left' ? 'translateX(30px)' : 'translateX(-30px)';
+            setTimeout(() => {
+                card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateX(0)';
+            }, 50);
+        }, 150);
     }
 
     function renderWeekStrip() {
@@ -413,7 +492,12 @@
                 <span class="day-name">${getWeekDayString(d)}</span>
                 <span class="day-num">${d.getDate()}</span>
             `;
-            item.onclick = () => { selectedDate = d; renderPage(); };
+            item.onclick = () => { 
+                selectedDate = d; 
+                calendarYear = selectedDate.getFullYear();
+                calendarMonth = selectedDate.getMonth();
+                renderPage(); 
+            };
             strip.appendChild(item);
         }
     }
@@ -421,23 +505,18 @@
     function renderInputFields() {
         const dateStr = formatDate(selectedDate);
         
-        // 渲染每日菜單區
         const dayData = globalCloudData[dateStr] || { breakfast: '', lunch: '', dinner: '', note: '' };
         document.getElementById('breakfast').value = dayData.breakfast || '';
         document.getElementById('lunch').value = dayData.lunch || '';
         document.getElementById('dinner').value = dayData.dinner || '';
         document.getElementById('note').value = dayData.note || '';
 
-        // 🆕 解析並渲染常駐食材標籤
         const ingData = globalCloudData[INGREDIENTS_KEY] || { breakfast: '' };
         const rawString = ingData.breakfast || '';
-        
-        // 用英文逗號拆分字串，濾掉空字串
         currentIngredientsList = rawString.split(',').map(s => s.trim()).filter(s => s !== '');
         renderIngredientTags();
     }
 
-    // 🆕 渲染食材小標籤
     function renderIngredientTags() {
         const container = document.getElementById('tags-container');
         if (!container) return;
@@ -459,30 +538,26 @@
         });
     }
 
-    // 🆕 新增單個食材標籤
     function addIngredientTag() {
         const input = document.getElementById('ingredient-input');
         const value = input.value.trim();
         if (value === '') return;
 
-        // 防止重複新增一模一樣的食材
         if (!currentIngredientsList.includes(value)) {
             currentIngredientsList.push(value);
             renderIngredientTags();
             saveIngredientsToServer();
         }
-        input.value = ''; // 清空輸入欄位
+        input.value = '';
         input.focus();
     }
 
-    // 🆕 移除單個食材標籤
     function removeIngredientTag(index) {
         currentIngredientsList.splice(index, 1);
         renderIngredientTags();
         saveIngredientsToServer();
     }
 
-    // 🆕 一鍵清除所有食材標籤
     function clearAllIngredients() {
         if (currentIngredientsList.length === 0) return;
         if (confirm("確定要清空所有現有食材庫存嗎？")) {
@@ -492,7 +567,6 @@
         }
     }
 
-    // 渲染完整月曆
     function renderCalendar() {
         const grid = document.getElementById('calendar-grid');
         if (!grid) return;
@@ -520,19 +594,19 @@
             const cell = document.createElement('div');
             cell.className = `cal-day ${dStr === formatDate(selectedDate) ? 'selected' : ''} ${hasRecord(dStr) ? 'has-data' : ''}`;
             cell.innerText = day;
-            cell.onclick = () => { selectedDate = dObj; renderPage(); };
+            cell.onclick = () => { 
+                selectedDate = dObj; 
+                calendarYear = selectedDate.getFullYear();
+                calendarMonth = selectedDate.getMonth();
+                renderPage(); 
+            };
             grid.appendChild(cell);
         }
     }
 
     function fetchDataFromServer() {
         const statusText = document.getElementById('sync-text');
-        if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("填入")) {
-            if(statusText) statusText.innerText = "⚠️ 尚未設定 Google 雲端網址，目前為本地儲存模式";
-            return;
-        }
-        
-        if(statusText) statusText.innerText = "🔄 正在連線雲端最新資料...";
+        if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("填入")) return;
         
         fetch(GOOGLE_SCRIPT_URL)
             .then(r => r.json())
@@ -541,10 +615,6 @@
                 localStorage.setItem('menu_cloud_cache', JSON.stringify(data));
                 if(statusText) statusText.innerText = "🟢 雲端同步完成";
                 renderPage();
-            })
-            .catch(err => {
-                console.error(err);
-                if(statusText) statusText.innerText = "🔴 連線失敗";
             });
     }
 
@@ -561,7 +631,6 @@
         postToServer(currentData);
     }
 
-    // 🆕 儲存食材（將陣列重新用逗號串聯，塞進雲端）
     function saveIngredientsToServer() {
         const combinedString = currentIngredientsList.join(',');
         const currentData = {
@@ -585,8 +654,6 @@
         }).then(() => {
             if(statusText) statusText.innerText = "🟢 雲端同步完成";
             showToast("雲端儲存成功");
-        }).catch(err => {
-            if(statusText) statusText.innerText = "🔴 儲存失敗，已暫存於手機";
         });
     }
 
