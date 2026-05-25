@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v5</title>
+    <title>每日菜單紀錄本 Pro v6</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -15,8 +15,9 @@
             --today-bg: #ebdcd5;
             --selected-bg: #8c9e8e;
             --today-red: #d14949;
+            --fridge-color: #6d8294; /* 🆕 食材庫存專用藍灰色 */
         }
-        
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -116,7 +117,7 @@
         }
 
         /* 內容輸入卡片 */
-        .menu-card {
+        .menu-card, .ingredients-card {
             background: var(--card-bg);
             border-radius: 24px;
             padding: 20px;
@@ -125,8 +126,16 @@
             margin-bottom: 20px;
         }
 
+        /* 🆕 現有食材庫存卡片專用樣式 */
+        .ingredients-card {
+            border-left: 5px solid var(--fridge-color);
+        }
+
         .meal-group {
             margin-bottom: 18px;
+        }
+        .meal-group:last-child {
+            margin-bottom: 0;
         }
 
         .meal-label {
@@ -151,6 +160,13 @@
             color: var(--text-main);
             resize: none;
             outline: none;
+        }
+
+        /* 食材專用輸入框高度調高一點方便條列 */
+        #ingredients-stock {
+            height: 95px;
+            background-color: #f4f6f8;
+            border: 1px solid #ced5dc;
         }
 
         .sync-status {
@@ -237,6 +253,13 @@
         </div>
     </div>
 
+    <div class="ingredients-card">
+        <div class="meal-group">
+            <div class="meal-label" style="color: var(--fridge-color);"><span>🧊</span> 現有食材庫存 </div>
+            <textarea id="ingredients-stock" placeholder="高麗菜半顆、雞蛋一盒、冷凍鮭魚..." onchange="saveIngredientsToServer()"></textarea>
+        </div>
+    </div>
+
     <div class="bottom-calendar">
         <div class="calendar-header">
             <button onclick="changeMonth(-1)" style="border:none;background:none;font-weight:bold;padding:5px 10px;cursor:pointer;">❮</button>
@@ -250,8 +273,11 @@
 <div id="toast" class="toast">儲存成功</div>
 
 <script>
-    // 🔥🔥🔥【請在這裡替換成你自己的 Google Apps Script 網頁應用程式網址】🔥🔥🔥
+    // 🔥🔥🔥【請在這裡替換成你自己的 Google Apps Script 網頁應用程式網址】🔥🔥開
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlq3VbOhNcHcedSjmFgv5NPXUtTEJUKQYQtum33PP1ChNa-Z8X7XXPZ6zTkee6t1JZ-g/exec";
+
+    // 固定的特殊識別識別代碼
+    const INGREDIENTS_KEY = "__GLOBAL_INGREDIENTS__";
 
     let selectedDate = new Date();
     let calendarYear = selectedDate.getFullYear();
@@ -305,11 +331,17 @@
 
     function renderInputFields() {
         const dateStr = formatDate(selectedDate);
+        
+        // 渲染每日菜單區
         const dayData = globalCloudData[dateStr] || { breakfast: '', lunch: '', dinner: '', note: '' };
         document.getElementById('breakfast').value = dayData.breakfast || '';
         document.getElementById('lunch').value = dayData.lunch || '';
         document.getElementById('dinner').value = dayData.dinner || '';
         document.getElementById('note').value = dayData.note || '';
+
+        // 🆕 渲染常駐食材區（永遠只抓固定特殊代碼的資料）
+        const ingData = globalCloudData[INGREDIENTS_KEY] || { breakfast: '' };
+        document.getElementById('ingredients-stock').value = ingData.breakfast || '';
     }
 
     function renderCalendar() {
@@ -371,10 +403,11 @@
             })
             .catch(err => {
                 console.error(err);
-                if(statusText) statusText.innerText = "🔴 連線失敗 (請確認 Google 部署是否設為「任何人」)";
+                if(statusText) statusText.innerText = "🔴 連線失敗";
             });
     }
 
+    // 儲存每日菜單
     function saveDataToServer() {
         const dateStr = formatDate(selectedDate);
         const currentData = {
@@ -386,6 +419,25 @@
         };
         
         globalCloudData[dateStr] = currentData;
+        postToServer(currentData);
+    }
+
+    // 🆕 儲存常駐食材（固定寫入特殊代碼行）
+    function saveIngredientsToServer() {
+        const currentData = {
+            date: INGREDIENTS_KEY,
+            breakfast: document.getElementById('ingredients-stock').value, // 借用早餐欄位存放食材字串
+            lunch: '',
+            dinner: '',
+            note: ''
+        };
+        
+        globalCloudData[INGREDIENTS_KEY] = currentData;
+        postToServer(currentData);
+    }
+
+    // 統一發送 API 到 Google 雲端
+    function postToServer(payload) {
         localStorage.setItem('menu_cloud_cache', JSON.stringify(globalCloudData));
         renderCalendar();
         
@@ -396,7 +448,7 @@
             method: 'POST', 
             mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentData)
+            body: JSON.stringify(payload)
         }).then(() => {
             if(statusText) statusText.innerText = "🟢 雲端同步完成";
             showToast("雲端儲存成功");
@@ -413,6 +465,7 @@
     }
 
     function hasRecord(d) { 
+        if (d === INGREDIENTS_KEY) return false;
         const data = globalCloudData[d]; 
         return data && ((data.breakfast || '').trim() !== '' || (data.lunch || '').trim() !== '' || (data.dinner || '').trim() !== '' || (data.note || '').trim() !== ''); 
     }
@@ -433,24 +486,24 @@
         setTimeout(() => t.style.opacity = 0, 1500); 
     }
 
-    // 🆕 升級優化版：完美處理微軟 Excel 換行相容性
     function exportToCSV() {
         let c = "\ufeff日期,早餐,午餐,晚餐,備註\n";
         Object.keys(globalCloudData).sort().forEach(k => {
+            // 導出時將特殊標籤換成更好辨識的名稱
+            let displayName = (k === INGREDIENTS_KEY) ? "常駐現有食材庫存" : k;
             const d = globalCloudData[k];
             
-            // 🟢 將一般換行 \n 強制替換成微軟認得的 \r\n，確保下載後在 Excel 打開排版完美
             let bf = (d.breakfast || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let lh = (d.lunch || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let dn = (d.dinner || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             let nt = (d.note || '').replace(/\r?\n/g, '\r\n').replace(/"/g, '""');
             
-            c += `${k},"${bf}","${lh}","${dn}","${nt}"\n`;
+            c += `${displayName},"${bf}","${lh}","${dn}","${nt}"\n`;
         });
         const b = new Blob([c], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(b);
-        a.download = `菜單備份_${formatDate(new Date())}.csv`;
+        a.download = `菜單與食材備份_${formatDate(new Date())}.csv`;
         a.click();
     }
 </script>
