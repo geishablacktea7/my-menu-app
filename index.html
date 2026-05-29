@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日菜單紀錄本 Pro v11.1</title>
+    <title>每日菜單紀錄本 Pro v11.2</title>
     <style>
         :root {
             --bg-color: #f7f5f0;
@@ -18,32 +18,39 @@
             --fridge-color: #6d8294;
             --danger-color: #c96868;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 16px; padding-bottom: 60px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 500px; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         h1 { font-size: 1.3rem; font-weight: 700; color: #3d3130; }
         .btn-export { background-color: var(--accent-color); color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        
+        /* 頂部一週快選 */
         .week-strip { display: flex; justify-content: space-between; background: var(--card-bg); padding: 10px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid var(--border-color); }
-        .week-day-item { flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 8px 0; border-radius: 12px; }
-        .week-day-item .day-name { font-size: 0.7rem; color: #9c8e8d; margin-bottom: 4px; }
+        .week-day-item { flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 8px 0; border-radius: 12px; transition: 0.2s; }
+        .week-day-item .day-name { font-size: 0.7rem; color: #9c8e8d; margin-bottom: 4px; font-weight: 600; }
         .week-day-item .day-num { font-size: 1rem; font-weight: 700; }
-        .week-day-item.is-today .day-name, .week-day-item.is-today .day-num { color: var(--today-red); }
+        .week-day-item.is-today .day-name, .week-day-item.is-today .day-num { color: var(--today-red) !important; }
         .week-day-item.active { background-color: var(--selected-bg); color: white !important; }
         .week-day-item.active .day-name, .week-day-item.active .day-num { color: white !important; }
-        .menu-card, .ingredients-card { background: var(--card-bg); border-radius: 24px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+
+        .menu-card, .ingredients-card { background: var(--card-bg); border-radius: 24px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); }
         .ingredients-card { border-left: 5px solid var(--fridge-color); }
         .meal-group { margin-bottom: 18px; }
         .meal-label { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: #5c4d4c; }
-        .btn-clear-all { background: none; border: 1px solid var(--danger-color); color: var(--danger-color); padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer; }
+        .btn-clear-all { background: none; border: 1px solid var(--danger-color); color: var(--danger-color); padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        
         textarea { width: 100%; height: 50px; background-color: #faf9f6; border: 1px solid #ebdcd5; border-radius: 12px; padding: 10px; font-size: 1rem; color: var(--text-main); resize: none; outline: none; }
         #dinner { height: 70px; }
+        
         .ingredient-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
-        .ingredient-input-row input { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #ced5dc; outline: none; }
+        .ingredient-input-row input { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #ced5dc; outline: none; background: #f4f6f8; }
         .btn-add-tag { background-color: var(--fridge-color); color: white; border: none; padding: 0 16px; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .tags-container { width: 100%; min-height: 70px; background-color: #faf9f6; border: 1px dashed #ced5dc; border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+        
+        .tags-container { width: 100%; min-height: 70px; background-color: #faf9f6; border: 1px dashed #ced5dc; border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
         .ingredient-tag { background-color: #ebdcd5; color: #4a3e3d; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; }
-        .ingredient-tag .btn-remove { margin-left: 6px; cursor: pointer; color: #9c8e8d; font-weight: 800; }
+        .ingredient-tag .btn-remove { margin-left: 6px; cursor: pointer; color: #9c8e8d; font-weight: 800; font-size: 0.75rem; }
+        
         .sync-status { font-size: 0.75rem; color: #8c9e8e; text-align: center; margin-bottom: 12px; font-weight: bold; }
         .bottom-calendar { background: var(--card-bg); border-radius: 20px; padding: 14px; border: 1px solid var(--border-color); }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -52,7 +59,7 @@
         .cal-day { font-size: 0.85rem; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; position: relative; }
         .cal-day.selected { background-color: var(--selected-bg); color: white; }
         .cal-day.has-data::after { content: ''; position: absolute; bottom: 3px; width: 3px; height: 3px; background-color: #a39281; border-radius: 50%; }
-        .toast { position: fixed; bottom: 30px; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast { position: fixed; bottom: 30px; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000; }
     </style>
 </head>
 <body>
@@ -101,9 +108,9 @@
 
     <div class="bottom-calendar">
         <div class="calendar-header">
-            <button onclick="changeMonth(-1)" style="border:none;background:none;font-weight:bold;">❮</button>
+            <button onclick="changeMonth(-1)" style="border:none;background:none;font-weight:bold;padding:5px;cursor:pointer;">❮</button>
             <div id="calendar-month-title" style="font-weight:bold; font-size: 0.9rem;"></div>
-            <button onclick="changeMonth(1)" style="border:none;background:none;font-weight:bold;">❯</button>
+            <button onclick="changeMonth(1)" style="border:none;background:none;font-weight:bold;padding:5px;cursor:pointer;">❯</button>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
     </div>
@@ -136,17 +143,32 @@
         renderCalendar();
     }
 
+    // 修正：從今天開始顯示接下來的 7 天
     function renderWeekStrip() {
         const strip = document.getElementById('week-strip');
         strip.innerHTML = '';
         const today = new Date();
-        for (let i = -1; i < 6; i++) {
-            const d = new Date(today); d.setDate(today.getDate() + i);
+        
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i); // 0 = 今天, 1 = 明天...
             const dStr = formatDate(d);
+            
+            const isActive = dStr === formatDate(selectedDate);
+            const isToday = dStr === formatDate(today);
+
             const item = document.createElement('div');
-            item.className = `week-day-item ${dStr === formatDate(selectedDate) ? 'active' : ''} ${dStr === formatDate(today) ? 'is-today' : ''}`;
-            item.innerHTML = `<span class="day-name">${getWeekDayString(d)}</span><span class="day-num">${d.getDate()}</span>`;
-            item.onclick = () => { selectedDate = d; calendarYear = d.getFullYear(); calendarMonth = d.getMonth(); renderPage(); };
+            item.className = `week-day-item ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''}`;
+            item.innerHTML = `
+                <span class="day-name">${getWeekDayString(d)}</span>
+                <span class="day-num">${d.getDate()}</span>
+            `;
+            item.onclick = () => { 
+                selectedDate = new Date(d); 
+                calendarYear = selectedDate.getFullYear();
+                calendarMonth = selectedDate.getMonth();
+                renderPage(); 
+            };
             strip.appendChild(item);
         }
     }
@@ -160,13 +182,13 @@
         document.getElementById('note').value = dayData.note || '';
 
         const ingData = globalCloudData[INGREDIENTS_KEY] || { breakfast: '' };
-        currentIngredientsList = (ingData.breakfast || '').split(',').filter(s => s.trim() !== '');
+        currentIngredientsList = (ingData.breakfast || '').split(',').map(s=>s.trim()).filter(s => s !== '');
         renderIngredientTags();
     }
 
     function renderIngredientTags() {
         const container = document.getElementById('tags-container');
-        container.innerHTML = currentIngredientsList.length ? '' : '<span style="color:#b5a9a8; font-size:0.85rem;">目前沒有庫存</span>';
+        container.innerHTML = currentIngredientsList.length ? '' : '<span style="color:#b5a9a8; font-size:0.85rem; padding:5px;">目前沒有庫存</span>';
         currentIngredientsList.forEach((item, index) => {
             const tag = document.createElement('div');
             tag.className = 'ingredient-tag';
@@ -184,6 +206,7 @@
             saveIngredientsToServer();
         }
         input.value = '';
+        input.focus();
     }
 
     function removeIngredientTag(index) {
@@ -193,17 +216,22 @@
     }
 
     function clearAllIngredients() {
-        if (confirm("清空庫存？")) { currentIngredientsList = []; renderIngredientTags(); saveIngredientsToServer(); }
+        if (currentIngredientsList.length === 0) return;
+        if (confirm("確定要清空所有現有食材庫存嗎？")) { 
+            currentIngredientsList = []; 
+            renderIngredientTags(); 
+            saveIngredientsToServer(); 
+        }
     }
 
     function fetchDataFromServer() {
-        if (!GOOGLE_SCRIPT_URL) return;
+        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("填入")) return;
         fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
             globalCloudData = data;
             localStorage.setItem('menu_cloud_cache', JSON.stringify(data));
             document.getElementById('sync-text').innerText = "🟢 雲端同步完成";
             renderPage();
-        }).catch(() => { document.getElementById('sync-text').innerText = "❌ 同步失敗"; });
+        }).catch(() => { document.getElementById('sync-text').innerText = "❌ 無法連線雲端"; });
     }
 
     function saveDataToServer() {
@@ -220,7 +248,11 @@
     }
 
     function saveIngredientsToServer() {
-        const payload = { date: INGREDIENTS_KEY, breakfast: currentIngredientsList.join(','), lunch: '', dinner: '', note: '' };
+        const payload = { 
+            date: INGREDIENTS_KEY, 
+            breakfast: currentIngredientsList.join(','), 
+            lunch: '', dinner: '', note: '' 
+        };
         globalCloudData[INGREDIENTS_KEY] = payload;
         postToServer(payload);
     }
@@ -228,9 +260,16 @@
     function postToServer(payload) {
         localStorage.setItem('menu_cloud_cache', JSON.stringify(globalCloudData));
         renderCalendar();
-        document.getElementById('sync-text').innerText = "⏳ 同步中...";
-        fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
-        .then(() => { document.getElementById('sync-text').innerText = "🟢 雲端同步完成"; showToast("儲存成功"); });
+        document.getElementById('sync-text').innerText = "⏳ 正在同步修改至雲端...";
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify(payload) 
+        })
+        .then(() => { 
+            document.getElementById('sync-text').innerText = "🟢 雲端同步完成"; 
+            showToast("雲端儲存成功"); 
+        });
     }
 
     function renderCalendar() {
@@ -249,40 +288,54 @@
             const cell = document.createElement('div');
             cell.className = `cal-day ${dStr === formatDate(selectedDate) ? 'selected' : ''} ${hasData(dStr) ? 'has-data' : ''}`;
             cell.innerText = d;
-            cell.onclick = () => { selectedDate = dObj; renderPage(); };
+            cell.onclick = () => { 
+                selectedDate = new Date(dObj); 
+                calendarYear = selectedDate.getFullYear();
+                calendarMonth = selectedDate.getMonth();
+                renderPage(); 
+            };
             grid.appendChild(cell);
         }
     }
 
     function hasData(d) { 
+        if (d === INGREDIENTS_KEY) return false;
         const r = globalCloudData[d]; 
-        return r && (r.breakfast || r.lunch || r.dinner || r.note); 
+        return r && ((r.breakfast||'').trim() || (r.lunch||'').trim() || (r.dinner||'').trim() || (r.note||'').trim()); 
     }
     function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-    function getWeekDayString(d) { return ['日','一','二','三','四','五','六'][d.getDay()]; }
+    function getWeekDayString(d) { return ['週日','週一','週二','週三','週四','週五','週六'][d.getDay()]; }
     function changeMonth(n) { calendarMonth += n; if(calendarMonth>11){calendarMonth=0;calendarYear++;}else if(calendarMonth<0){calendarMonth=11;calendarYear--;} renderCalendar(); }
     function showToast(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 1500); }
+    
     function exportToCSV() {
         let c = "\ufeff日期,早餐,午餐,晚餐,備註\n";
         Object.keys(globalCloudData).sort().forEach(k => {
             const d = globalCloudData[k];
-            c += `${k},"${(d.breakfast||'').replace(/"/g,'""')}","${(d.lunch||'').replace(/"/g,'""')}","${(d.dinner||'').replace(/"/g,'""')}","${(d.note||'').replace(/"/g,'""')}"\n`;
+            let name = (k === INGREDIENTS_KEY) ? "食材庫存" : k;
+            c += `${name},"${(d.breakfast||'').replace(/"/g,'""')}","${(d.lunch||'').replace(/"/g,'""')}","${(d.dinner||'').replace(/"/g,'""')}","${(d.note||'').replace(/"/g,'""')}"\n`;
         });
         const b = new Blob([c], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `backup.csv`; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `菜單備份_${formatDate(new Date())}.csv`; a.click();
     }
+
     function setupSwipe() {
         let startX = 0;
         const card = document.getElementById('swipe-menu-card');
-        card.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+        card.addEventListener('touchstart', e => {
+            if (['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+            startX = e.touches[0].clientX;
+        }, {passive: true});
         card.addEventListener('touchend', e => {
+            if (['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
             const diff = e.changedTouches[0].clientX - startX;
-            if (Math.abs(diff) > 50) {
+            if (Math.abs(diff) > 60) {
                 selectedDate.setDate(selectedDate.getDate() + (diff > 0 ? -1 : 1));
-                calendarYear = selectedDate.getFullYear(); calendarMonth = selectedDate.getMonth();
+                calendarYear = selectedDate.getFullYear();
+                calendarMonth = selectedDate.getMonth();
                 renderPage();
             }
-        });
+        }, {passive: true});
     }
 </script>
 </body>
